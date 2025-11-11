@@ -93,7 +93,6 @@ jobs:
           fi
           helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
             --namespace "$NAMESPACE" \
-            --create-namespace \
             --wait \
             --values "$CHART_PATH/values.yaml" \
             $PASSWORD_ARGS $EXTRA_ARGS
