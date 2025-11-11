@@ -32,6 +32,7 @@ jobs:
       OPENSHIFT_SERVER: ${{ secrets.OPENSHIFT_SERVER }}
       OPENSHIFT_TOKEN: ${{ secrets.OPENSHIFT_TOKEN }}
       OPENSHIFT_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE }}
+      OPENSHIFT_STORAGE_CLASS: ${{ secrets.OPENSHIFT_STORAGE_CLASS }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -81,6 +82,7 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           HELM_EXTRA_ARGS: ${{ secrets.HELM_EXTRA_ARGS }}
           CHART_PATH: ${{ env.CHART_PATH }}
+          STORAGE_CLASS: ${{ env.OPENSHIFT_STORAGE_CLASS }}
         run: |
           set -euo pipefail
           PASSWORD_ARGS=""
@@ -91,8 +93,14 @@ jobs:
           if [ -n "${HELM_EXTRA_ARGS:-}" ]; then
             EXTRA_ARGS="$HELM_EXTRA_ARGS"
           fi
+          STORAGE_ARGS=""
+          if [ -n "${STORAGE_CLASS:-}" ]; then
+            STORAGE_ARGS="--set persistence.storageClass=$STORAGE_CLASS"
+          fi
           helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
             --namespace "$NAMESPACE" \
+            --create-namespace \
             --wait \
+            --timeout 10m \
             --values "$CHART_PATH/values.yaml" \
-            $PASSWORD_ARGS $EXTRA_ARGS
+            $PASSWORD_ARGS $STORAGE_ARGS $EXTRA_ARGS
