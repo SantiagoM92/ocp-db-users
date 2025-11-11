@@ -36,6 +36,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install oc CLI
+        uses: redhat-actions/oc-setup@v1
+        with:
+          version: latest
+
       - name: Set release values
         id: vars
         env:
