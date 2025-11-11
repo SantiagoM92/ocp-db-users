@@ -1,0 +1,8 @@
+1. Get the release name:
+   kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+2. Forward the port for local access:
+   kubectl port-forward svc/{{ include "postgres-db.fullname" . }} 5432:{{ .Values.service.port }}
+3. Connect via psql:
+   PGPASSWORD=$(kubectl get secret {{ default (include "postgres-db.fullname" .) .Values.postgresql.existingSecret }} \
+     -o jsonpath='{.data.{{ .Values.postgresql.passwordKey }}}' | base64 -d) \\
+   psql --host=127.0.0.1 --port=5432 --username={{ .Values.postgresql.username }} {{ .Values.postgresql.database }}

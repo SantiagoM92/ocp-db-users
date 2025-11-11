@@ -1,0 +1,46 @@
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: postgres
+  tag: "15"
+  pullPolicy: IfNotPresent
+
+postgresql:
+  username: app_user
+  password: changeme
+  database: app_db
+  existingSecret: ""
+  passwordKey: POSTGRES_PASSWORD
+  port: 5432
+
+persistence:
+  enabled: true
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi
+  storageClass: ""
+
+service:
+  type: ClusterIP
+  port: 5432
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+securityContext:
+  enabled: true
+  runAsUser: 999
+  runAsGroup: 999
+  fsGroup: 999
+
+env: []

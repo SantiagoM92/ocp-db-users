@@ -1,0 +1,94 @@
+name: Deploy PostgreSQL
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'helm/postgres/**'
+      - '.github/workflows/deploy-postgres.yaml'
+  workflow_dispatch:
+    inputs:
+      namespace:
+        description: Kubernetes namespace to deploy into
+        required: false
+        default: database
+      release:
+        description: Helm release name
+        required: false
+        default: postgres
+
+env:
+  CHART_PATH: helm/postgres
+  DEFAULT_RELEASE: postgres
+  DEFAULT_NAMESPACE: database
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      OPENSHIFT_SERVER: ${{ secrets.OPENSHIFT_SERVER }}
+      OPENSHIFT_TOKEN: ${{ secrets.OPENSHIFT_TOKEN }}
+      OPENSHIFT_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set release values
+        id: vars
+        env:
+          RELEASE_INPUT: ${{ github.event.inputs.release }}
+          NAMESPACE_INPUT: ${{ github.event.inputs.namespace }}
+          DEFAULT_RELEASE: ${{ env.DEFAULT_RELEASE }}
+          DEFAULT_NAMESPACE: ${{ env.DEFAULT_NAMESPACE }}
+          SECRET_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE }}
+        run: |
+          set -euo pipefail
+          RELEASE_NAME="${RELEASE_INPUT:-$DEFAULT_RELEASE}"
+          if [ -n "${NAMESPACE_INPUT:-}" ]; then
+            NAMESPACE="$NAMESPACE_INPUT"
+          elif [ -n "${SECRET_NAMESPACE:-}" ]; then
+            NAMESPACE="$SECRET_NAMESPACE"
+          else
+            NAMESPACE="$DEFAULT_NAMESPACE"
+          fi
+          echo "release=$RELEASE_NAME" >> "$GITHUB_OUTPUT"
+          echo "namespace=$NAMESPACE" >> "$GITHUB_OUTPUT"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.13.3
+
+      - name: Login to OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          insecure_skip_tls_verify: true
+
+      - name: Deploy chart
+        env:
+          RELEASE_NAME: ${{ steps.vars.outputs.release }}
+          NAMESPACE: ${{ steps.vars.outputs.namespace }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          HELM_EXTRA_ARGS: ${{ secrets.HELM_EXTRA_ARGS }}
+          CHART_PATH: ${{ env.CHART_PATH }}
+        run: |
+          set -euo pipefail
+          PASSWORD_ARGS=""
+          if [ -n "$POSTGRES_PASSWORD" ]; then
+            PASSWORD_ARGS="--set postgresql.password=$POSTGRES_PASSWORD"
+          fi
+          EXTRA_ARGS=""
+          if [ -n "${HELM_EXTRA_ARGS:-}" ]; then
+            EXTRA_ARGS="$HELM_EXTRA_ARGS"
+          fi
+          helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
+            --namespace "$NAMESPACE" \
+            --create-namespace \
+            --wait \
+            --values "$CHART_PATH/values.yaml" \
+            $PASSWORD_ARGS $EXTRA_ARGS
