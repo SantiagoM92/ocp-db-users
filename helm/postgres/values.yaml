@@ -39,7 +39,7 @@ tolerations: []
 affinity: {}
 
 securityContext:
-  enabled: true
+  enabled: false
   runAsUser: 999
   runAsGroup: 999
   fsGroup: 999
