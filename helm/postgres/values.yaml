@@ -20,6 +20,7 @@ persistence:
     - ReadWriteOnce
   size: 1Gi
   storageClass: ""
+  existingClaim: ""
 
 service:
   type: ClusterIP

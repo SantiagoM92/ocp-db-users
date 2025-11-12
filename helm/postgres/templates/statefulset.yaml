@@ -1,5 +1,6 @@
 {{- $fullname := include "postgres-db.fullname" . -}}
 {{- $secretName := default $fullname .Values.postgresql.existingSecret -}}
+{{- $useExistingPVC := and .Values.persistence.enabled .Values.persistence.existingClaim -}}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -59,7 +60,12 @@ spec:
               port: postgres
             initialDelaySeconds: 10
             periodSeconds: 10
-      {{- if not .Values.persistence.enabled }}
+      {{- if $useExistingPVC }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim }}
+      {{- else if not .Values.persistence.enabled }}
       volumes:
         - name: data
           emptyDir: {}
@@ -76,7 +82,7 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-{{- if .Values.persistence.enabled }}
+{{- if and .Values.persistence.enabled (not $useExistingPVC) }}
   volumeClaimTemplates:
     - metadata:
         name: data
