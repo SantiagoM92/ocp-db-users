@@ -99,7 +99,6 @@ jobs:
           fi
           helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
             --namespace "$NAMESPACE" \
-            --create-namespace \
             --wait \
             --timeout 10m \
             --values "$CHART_PATH/values.yaml" \
